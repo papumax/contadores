@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registros de Impresoras</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-6xl mx-auto space-y-6">
+    
+    <!-- Encabezado y Filtros -->
+    <div class="bg-white p-6 rounded-lg shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+      <h1 class="text-2xl font-bold text-gray-800">Lecturas de Contadores</h1>
+      
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Selector Año -->
+        <div>
+          <label class="text-xs text-gray-500 block mb-1">Año</label>
+          <select id="select-anio" onchange="alCambiarAnio()" class="border border-gray-300 rounded-md p-2 bg-white text-sm min-w-[100px]">
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+
+        <!-- Selector Mes -->
+        <div>
+          <label class="text-xs text-gray-500 block mb-1">Mes</label>
+          <select id="select-mes" onchange="alCambiarMes()" disabled class="border border-gray-300 rounded-md p-2 bg-white text-sm min-w-[120px] disabled:bg-gray-100">
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+
+        <!-- Selector Día -->
+        <div>
+          <label class="text-xs text-gray-500 block mb-1">Día</label>
+          <select id="select-dia" onchange="filtrarYMostrar()" disabled class="border border-gray-300 rounded-md p-2 bg-white text-sm min-w-[100px] disabled:bg-gray-100">
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de Datos -->
+    <div class="bg-white p-6 rounded-lg shadow-sm overflow-x-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-gray-700">Registros</h2>
+        <span id="total-registros" class="text-sm font-medium text-gray-500">0 registros encontrados</span>
+      </div>
+      
+      <table class="w-full text-left border-collapse text-sm">
+        <thead>
+          <tr class="bg-gray-50 border-b text-gray-600">
+            <th class="p-3">Hora</th>
+            <th class="p-3">BNA</th>
+            <th class="p-3">BNB</th>
+            <th class="p-3">Color 1</th>
+            <th class="p-3">Color 1 BN</th>
+            <th class="p-3">Color 2</th>
+            <th class="p-3">Color 2 BN</th>
+            <th class="p-3">Planos</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-cuerpo">
+          <tr>
+            <td colspan="8" class="p-4 text-center text-gray-400">Selecciona un año, mes y día para ver los registros.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    // Configura tus credenciales de JSONBin.io
+    const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6ab04be6ffd5d160531d4e3b";
+    const API_KEY = "$2a$10$xXWWgDuP8PArJ1fgTKtQA.X15wewfWIbRs6ICu6jmTge.iruGKXhu";
+
+    let rawData = [];
+
+    const nombresMeses = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+
+    async function cargarDatos() {
+      try {
+        const res = await fetch(JSONBIN_URL, {
+          headers: { "X-Access-Key": API_KEY }
+        });
+        const json = await res.json();
+        rawData = json.record.historial;
+        poblarAnios();
+      } catch (err) {
+        console.error("Error cargando los datos:", err);
+      }
+    }
+
+    // 1. Extrae los años únicos disponibles (de más reciente a más antiguo)
+    function poblarAnios() {
+      const anios = [...new Set(rawData.map(item => item.Fecha.split('-')[0]))]
+        .sort((a, b) => b.localeCompare(a));
+        
+      const selectAnio = document.getElementById('select-anio');
+      selectAnio.innerHTML = '<option value="">Seleccionar</option>';
+      
+      anios.forEach(anio => {
+        selectAnio.innerHTML += `<option value="${anio}">${anio}</option>`;
+      });
+    }
+
+    // 2. Al seleccionar año, muestra los meses disponibles (de más reciente a más antiguo)
+    function alCambiarAnio() {
+      const anioSeleccionado = document.getElementById('select-anio').value;
+      const selectMes = document.getElementById('select-mes');
+      const selectDia = document.getElementById('select-dia');
+
+      selectMes.innerHTML = '<option value="">Seleccionar</option>';
+      selectDia.innerHTML = '<option value="">Seleccionar</option>';
+      selectDia.disabled = true;
+
+      if (!anioSeleccionado) {
+        selectMes.disabled = true;
+        limpiarTabla();
+        return;
+      }
+
+      const meses = [...new Set(
+        rawData
+          .filter(item => item.Fecha.startsWith(anioSeleccionado))
+          .map(item => item.Fecha.split('-')[1])
+      )].sort((a, b) => b.localeCompare(a));
+
+      meses.forEach(mes => {
+        const indexMes = parseInt(mes, 10) - 1;
+        selectMes.innerHTML += `<option value="${mes}">${nombresMeses[indexMes]}</option>`;
+      });
+
+      selectMes.disabled = false;
+      limpiarTabla();
+    }
+
+    // 3. Al seleccionar mes, muestra los días disponibles (de más reciente a más antiguo)
+    function alCambiarMes() {
+      const anio = document.getElementById('select-anio').value;
+      const mes = document.getElementById('select-mes').value;
+      const selectDia = document.getElementById('select-dia');
+
+      selectDia.innerHTML = '<option value="">Seleccionar</option>';
+
+      if (!mes) {
+        selectDia.disabled = true;
+        limpiarTabla();
+        return;
+      }
+
+      const prefijoFecha = `${anio}-${mes}`;
+      const dias = [...new Set(
+        rawData
+          .filter(item => item.Fecha.startsWith(prefijoFecha))
+          .map(item => item.Fecha.split(' ')[0].split('-')[2])
+      )].sort((a, b) => b.localeCompare(a));
+
+      dias.forEach(dia => {
+        selectDia.innerHTML += `<option value="${dia}">${dia}</option>`;
+      });
+
+      selectDia.disabled = false;
+      limpiarTabla();
+    }
+
+    // 4. Ordena y muestra los registros del día desde el más reciente al más antiguo
+    function filtrarYMostrar() {
+      const anio = document.getElementById('select-anio').value;
+      const mes = document.getElementById('select-mes').value;
+      const dia = document.getElementById('select-dia').value;
+
+      if (!anio || !mes || !dia) {
+        limpiarTabla();
+        return;
+      }
+
+      const fechaBuscada = `${anio}-${mes}-${dia}`;
+      
+      // Filtra los registros del día y los ordena de forma descendente por la hora/fecha completa
+      const registrosDelDia = rawData
+        .filter(item => item.Fecha.startsWith(fechaBuscada))
+        .sort((a, b) => b.Fecha.localeCompare(a.Fecha));
+
+      const tbody = document.getElementById('tabla-cuerpo');
+      tbody.innerHTML = "";
+
+      document.getElementById('total-registros').innerText = `${registrosDelDia.length} registros encontrados`;
+
+      if (registrosDelDia.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-400">No se encontraron registros.</td></tr>';
+        return;
+      }
+
+      registrosDelDia.forEach(item => {
+        const hora = item.Fecha.split(' ')[1] || item.Fecha;
+        tbody.innerHTML += `
+          <tr class="border-b hover:bg-gray-50 text-gray-700">
+            <td class="p-3 font-semibold text-blue-600">${hora}</td>
+            <td class="p-3">${item.BNA}</td>
+            <td class="p-3">${item.BNB}</td>
+            <td class="p-3">${item.COLOR1}</td>
+            <td class="p-3">${item.COLOR1BN}</td>
+            <td class="p-3">${item.COLOR2}</td>
+            <td class="p-3">${item.COLOR2BN}</td>
+            <td class="p-3">${item.PLANOS}</td>
+          </tr>`;
+      });
+    }
+
+    function limpiarTabla() {
+      document.getElementById('tabla-cuerpo').innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-400">Selecciona un año, mes y día para ver los registros.</td></tr>';
+      document.getElementById('total-registros').innerText = '0 registros encontrados';
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>
