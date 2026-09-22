@@ -84,9 +84,12 @@
 
     async function cargarDatos() {
       try {
-        const res = await fetch(JSONBIN_URL);
+
+        const res = await fetch('./data.json');
         const json = await res.json();
-        rawData = json.record.historial;
+        rawData = json.historial;
+        
+        
         poblarAnios();
       } catch (err) {
         console.error("Error cargando los datos:", err);
