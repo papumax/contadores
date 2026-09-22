@@ -87,7 +87,7 @@
 
         const res = await fetch('./data.json');
         const json = await res.json();
-        rawData = json.historial;
+        rawData = json.record.historial;
         
         
         poblarAnios();
