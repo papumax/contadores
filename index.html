@@ -83,13 +83,23 @@
     ];
 
     async function cargarDatos() {
-      try {
+try {
+        // Carga relativa optimizada para GitHub Pages
+        const res = await fetch('data.json?v=' + new Date().getTime());
+        
+        if (!res.ok) {
+          throw new Error(`No se encontró el archivo data.json (Código HTTP: ${res.status})`);
+        }
 
-        const res = await fetch('./data.json');
         const json = await res.json();
+        
+        if (!json || !json.historial) {
+          throw new Error("El archivo JSON no tiene la propiedad 'historial'");
+        }
+
         rawData = json.historial;
-        
-        
+
+  
         poblarAnios();
       } catch (err) {
         console.error("Error cargando los datos:", err);
