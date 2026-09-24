@@ -82,29 +82,48 @@
       "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
-    async function cargarDatos() {
-try {
-        // Carga relativa optimizada para GitHub Pages
-        const res = await fetch('data.json?v=' + new Date().getTime());
-        
-        if (!res.ok) {
-          throw new Error(`No se encontró el archivo data.json (Código HTTP: ${res.status})`);
+   async function cargarDatos() {
+  try {
+    // Pon aquí tu URL de Firebase terminada en /historial.json
+    const res = await fetch('https://contadores-impresoras-81a84-default-rtdb.firebaseio.com/historial.json');
+    
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    const json = await res.json();
+    
+    if (!json) {
+      rawData = [];
+    } else {
+      // Convierte los objetos indexados de Firebase en el arreglo de registros que necesita tu tabla
+      rawData = Object.values(json);
+    }
+
+    poblarAnios();
+
+    // Autoseleccionar automáticamente el año, mes y día más reciente
+    const selectAnio = document.getElementById('select-anio');
+    if (selectAnio.options.length > 1) {
+      selectAnio.selectedIndex = 1;
+      alCambiarAnio();
+
+      const selectMes = document.getElementById('select-mes');
+      if (selectMes.options.length > 1) {
+        selectMes.selectedIndex = 1;
+        alCambiarMes();
+
+        const selectDia = document.getElementById('select-dia');
+        if (selectDia.options.length > 1) {
+          selectDia.selectedIndex = 1;
+          filtrarYMostrar();
         }
-
-        const json = await res.json();
-        
-        if (!json || !json.historial) {
-          throw new Error("El archivo JSON no tiene la propiedad 'historial'");
-        }
-
-        rawData = json.historial;
-
-  
-        poblarAnios();
-      } catch (err) {
-        console.error("Error cargando los datos:", err);
       }
     }
+  } catch (err) {
+    console.error("Error cargando los datos desde Firebase:", err);
+  }
+}
 
     // 1. Extrae los años únicos disponibles (de más reciente a más antiguo)
     function poblarAnios() {
